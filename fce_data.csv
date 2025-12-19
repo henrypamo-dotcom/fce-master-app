@@ -10,7 +10,7 @@ ABLE,The system is currently ______ to process your request.,unable
 ABLE,The software will ______ you to work faster.,enable
 COMFORT,The bed was extremely ______.,uncomfortable
 COMFORT,They live ______ in a big house.,comfortably
-"LUCK,""______, we missed the train by one minute."",unluckily"
+LUCK,"______, we missed the train by one minute.",unluckily
 LUCK,He was ______ to win the lottery.,lucky
 SCIENCE,New ______ discoveries are made every day.,scientific
 SCIENCE,The ______ published his findings.,scientist
@@ -75,3 +75,4 @@ SIMPLE,Can you ______ the explanation for me?,simplify
 TERROR,The movie ______ the children.,terrified
 MEMORY,I have to ______ a list of dates.,memorise
 LARGE,They plan to ______ the school next year.,enlarge
+
