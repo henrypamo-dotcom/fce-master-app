@@ -163,9 +163,24 @@ def run_part_1():
                 full_text = full_text.replace(f"_{i+1}_", f"<span class='gap-correct'>{ans}</span>")
             st.markdown(f"<div class='text-box'>{full_text}</div>", unsafe_allow_html=True)
 
-            if st.button("🔄 Try Another Text"):
-                st.session_state.p1_active = False
-                st.rerun()
+            # 2. EL BOTÓN MÁGICO "TRY ANOTHER TEXT" (MEJORADO)
+    if st.button("🔄 Try Another Text"):
+        # Verificamos si hay suficientes datos para variar
+        if len(df) > 1:
+            # Guardamos el título actual para comparar
+            titulo_actual = st.session_state.p2_data['Title']
+            
+            # Buscamos uno nuevo hasta que sea diferente al actual
+            nuevo_row = df.sample(1).iloc[0]
+            while nuevo_row['Title'] == titulo_actual:
+                nuevo_row = df.sample(1).iloc[0]
+            
+            # Asignamos el nuevo y reiniciamos el reloj
+            st.session_state.p2_data = nuevo_row
+            st.session_state.p2_start = time.time()
+            st.rerun()
+        else:
+            st.warning("Solo hay 1 ejercicio en la base de datos. Añade más en GitHub.")
 
 # ==============================================================================
 # 4. LÓGICA: PART 2 (OPEN CLOZE)
