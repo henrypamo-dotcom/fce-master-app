@@ -355,6 +355,40 @@ def main():
     st.sidebar.markdown("---")
     st.sidebar.caption("v5.0 - Final Stable Release")
 
+    # --- CRÉDITOS DEL CREADOR (Tech Style) ---
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("""
+        <style>
+        .dev-card {
+            background-color: #1e1e1e;
+            color: #00ff41; /* Verde Hacker */
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #00ff41;
+            text-align: center;
+            font-family: 'Courier New', monospace; /* Letra tecnológica */
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.2);
+            margin-bottom: 20px;
+        }
+        .dev-title {
+            font-size: 12px;
+            color: #ffffff;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        .dev-name {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        </style>
+        
+        <div class="dev-card">
+            <div class="dev-title">🚀 Developed by</div>
+            <div class="dev-name">&lt;Henry Palomino/&gt;</div>
+        </div>
+    """, unsafe_allow_html=True)
+    
     if menu == "🏠 Home":
         st.title("Welcome to the FCE Exam Simulator")
         st.markdown("""
