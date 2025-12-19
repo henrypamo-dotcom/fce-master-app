@@ -53,19 +53,20 @@ st.markdown("""
 # ==============================================================================
 # 2. FUNCIÓN DE CARGA DE DATOS (ROBUSTA)
 # ==============================================================================
-# Reemplaza tu función load_data actual por esta:
+# Modificación 1: Motor de lectura más inteligente
 def load_data(filename, required_cols):
     try:
-        # He quitado "on_bad_lines='skip'" intencionalmente
-        df = pd.read_csv(filename)
+        # Usamos engine='python' y sep=None para que detecte automáticamente el separador
+        # quotechar='"' ayuda a manejar las comas dentro de los textos
+        df = pd.read_csv(filename, on_bad_lines='skip', engine='python', quotechar='"')
         
-        # --- CHIVATO: Esto mostrará en tu web cuántas preguntas detecta ---
-        st.sidebar.warning(f"Archivo {filename}: {len(df)} preguntas cargadas.") 
-        # ------------------------------------------------------------------
+        # --- DEBUG VISUAL (Solo para ti) ---
+        # Si ves este número bajo (ej: 1 o 2), es que el CSV sigue mal. Debería ser 6 o más.
+        st.sidebar.caption(f"File: {filename} | Loaded: {len(df)} rows") 
+        # -----------------------------------
         
         return df.dropna(subset=required_cols)
-    except Exception as e:
-        st.error(f"🚨 ERROR FATAL en {filename}: {e}")
+    except Exception:
         return None
 
 # ==============================================================================
@@ -246,9 +247,24 @@ def run_part_2():
                 full_text = full_text.replace(f"_{i+1}_", f"<span class='gap-correct'>{ans}</span>")
             st.markdown(f"<div class='text-box'>{full_text}</div>", unsafe_allow_html=True)
 
-            if st.button("🔄 Try Another Text"):
-                st.session_state.p2_active = False
-                st.rerun()
+            # 2. EL BOTÓN MÁGICO "TRY ANOTHER TEXT" (MEJORADO)
+    if st.button("🔄 Try Another Text"):
+        # Verificamos si hay suficientes datos para variar
+        if len(df) > 1:
+            # Guardamos el título actual para comparar
+            titulo_actual = st.session_state.p2_data['Title']
+            
+            # Buscamos uno nuevo hasta que sea diferente al actual
+            nuevo_row = df.sample(1).iloc[0]
+            while nuevo_row['Title'] == titulo_actual:
+                nuevo_row = df.sample(1).iloc[0]
+            
+            # Asignamos el nuevo y reiniciamos el reloj
+            st.session_state.p2_data = nuevo_row
+            st.session_state.p2_start = time.time()
+            st.rerun()
+        else:
+            st.warning("Solo hay 1 ejercicio en la base de datos. Añade más en GitHub.")
 
 # ==============================================================================
 # 5. LÓGICA: PART 3 (WORD FORMATION)
