@@ -53,7 +53,6 @@ st.markdown("""
 # ==============================================================================
 # 2. FUNCIÓN DE CARGA DE DATOS (ROBUSTA)
 # ==============================================================================
-@st.cache_data
 def load_data(filename, required_cols):
     try:
         df = pd.read_csv(filename, on_bad_lines='skip')
