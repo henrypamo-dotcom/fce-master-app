@@ -168,7 +168,7 @@ def run_part_1():
         # Verificamos si hay suficientes datos para variar
         if len(df) > 1:
             # Guardamos el título actual para comparar
-            titulo_actual = st.session_state.p2_data['Title']
+            titulo_actual = st.session_state.p1_data['Title']
             
             # Buscamos uno nuevo hasta que sea diferente al actual
             nuevo_row = df.sample(1).iloc[0]
@@ -176,8 +176,8 @@ def run_part_1():
                 nuevo_row = df.sample(1).iloc[0]
             
             # Asignamos el nuevo y reiniciamos el reloj
-            st.session_state.p2_data = nuevo_row
-            st.session_state.p2_start = time.time()
+            st.session_state.p1_data = nuevo_row
+            st.session_state.p1_start = time.time()
             st.rerun()
         else:
             st.warning("Solo hay 1 ejercicio en la base de datos. Añade más en GitHub.")
