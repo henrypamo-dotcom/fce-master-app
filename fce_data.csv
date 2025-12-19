@@ -21,7 +21,7 @@ FRIEND,Their ______ has lasted for twenty years.,friendship
 EMPLOY,The company has 500 ______.,employees
 EMPLOY,______ is a big problem in this country.,unemployment
 EMPLOY,Her ______ was very demanding.,employer
-"HELP,The instructions were very ______; I couldn't understand them.,unhelpful"
+HELP,The instructions were very ______; I couldn't understand them.,unhelpful
 HELP,Thank you for your ______.,helpfulness
 HELP,He looked ______ at the broken car.,helplessly
 VARY,There is a wide ______ of options.,variety
@@ -75,4 +75,5 @@ SIMPLE,Can you ______ the explanation for me?,simplify
 TERROR,The movie ______ the children.,terrified
 MEMORY,I have to ______ a list of dates.,memorise
 LARGE,They plan to ______ the school next year.,enlarge
+
 
