@@ -49,11 +49,11 @@ EXIST,Do you believe in the ______ of ghosts?,existence
 VIOLENT,The film contained too much ______.,violence
 AGREE,I completely ______ with what you said.,disagree
 HONEST,It was ______ of you to take the money.,dishonest
-"PATIENT,Don't be so ______; wait for your turn.,impatient"
+PATIENT,Don't be so ______; wait for your turn.,impatient
 RESPONSIBLE,Leaving the child alone was very ______.,irresponsible
 LEGAL,It is ______ to drive without a license.,illegal
 APPEAR,The magician made the rabbit ______.,disappear
-"LIKE,It is very ______ that he will come; he hates parties.,unlikely"
+LIKE,It is very ______ that he will come; he hates parties.,unlikely
 UNDERSTAND,There was a slight ______ about the time.,misunderstanding
 VISIT,The museum welcomes 1 000 ______ a day.,visitors
 ACT,Who is your favourite ______?,actor
@@ -75,6 +75,3 @@ SIMPLE,Can you ______ the explanation for me?,simplify
 TERROR,The movie ______ the children.,terrified
 MEMORY,I have to ______ a list of dates.,memorise
 LARGE,They plan to ______ the school next year.,enlarge
-
-
-
