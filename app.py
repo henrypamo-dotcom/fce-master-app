@@ -53,14 +53,19 @@ st.markdown("""
 # ==============================================================================
 # 2. FUNCIÓN DE CARGA DE DATOS (ROBUSTA)
 # ==============================================================================
+# Reemplaza tu función load_data actual por esta:
 def load_data(filename, required_cols):
     try:
-        df = pd.read_csv(filename, on_bad_lines='skip')
-        # Eliminamos filas vacías si faltan columnas clave
+        # He quitado "on_bad_lines='skip'" intencionalmente
+        df = pd.read_csv(filename)
+        
+        # --- CHIVATO: Esto mostrará en tu web cuántas preguntas detecta ---
+        st.sidebar.warning(f"Archivo {filename}: {len(df)} preguntas cargadas.") 
+        # ------------------------------------------------------------------
+        
         return df.dropna(subset=required_cols)
-    except FileNotFoundError:
-        return None
     except Exception as e:
+        st.error(f"🚨 ERROR FATAL en {filename}: {e}")
         return None
 
 # ==============================================================================
