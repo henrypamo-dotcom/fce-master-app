@@ -186,6 +186,14 @@ def run_part_1():
 # 4. LÓGICA: PART 2 (OPEN CLOZE)
 # ==============================================================================
 def run_part_2():
+# 1. Verificamos si los datos existen
+    if 'p2_data' not in st.session_state:
+        st.error("No se encontraron datos cargados. Por favor ve al inicio o carga la información necesaria.")
+        return # Detenemos la función para evitar el error
+
+# 2. Ahora es seguro acceder
+    titulo_actual = st.session_state.p2_data['Title']
+    
     st.header("🧩 Part 2: Open Cloze")
     df = load_data('fce_open_cloze.csv', ['Text', 'Answers'])
     
