@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 import time
+import json
+import os
 
 # ==============================================================================
 # 1. CONFIGURACIÓN Y ESTILOS (CSS)
@@ -51,34 +53,70 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==============================================================================
-# 2. FUNCIÓN DE CARGA DE DATOS (ROBUSTA)
+# 2. SISTEMA DE PERSISTENCIA (NUEVO)
 # ==============================================================================
-# Modificación 1: Motor de lectura más inteligente
+STATE_FILE = 'fce_current_state.json'
+
+def save_state_to_disk(key, data_series):
+    """Guarda una serie de Pandas o dict en JSON para sobrevivir al F5"""
+    try:
+        # Si es Pandas Series, convertimos a dict para que JSON lo entienda
+        if isinstance(data_series, pd.Series):
+            data_to_save = data_series.to_dict()
+        else:
+            data_to_save = data_series
+            
+        with open(STATE_FILE, 'w') as f:
+            # Guardamos qué parte es y los datos
+            json.dump({"active_part": key, "data": data_to_save}, f)
+    except Exception as e:
+        print(f"Error guardando estado: {e}")
+
+def load_state_from_disk(target_part):
+    """Intenta recuperar datos si se borraron de la memoria"""
+    if os.path.exists(STATE_FILE):
+        try:
+            with open(STATE_FILE, 'r') as f:
+                saved = json.load(f)
+                # Solo recuperamos si el archivo guardado corresponde a la parte que pedimos
+                if saved.get("active_part") == target_part:
+                    return saved["data"]
+        except Exception:
+            return None
+    return None
+
+# ==============================================================================
+# 3. FUNCIÓN DE CARGA DE DATOS
+# ==============================================================================
 def load_data(filename, required_cols):
     try:
-        # Usamos engine='python' y sep=None para que detecte automáticamente el separador
-        # quotechar='"' ayuda a manejar las comas dentro de los textos
         df = pd.read_csv(filename, on_bad_lines='skip', engine='python', quotechar='"')
-        
-        # --- DEBUG VISUAL (Solo para ti) ---
-        # Si ves este número bajo (ej: 1 o 2), es que el CSV sigue mal. Debería ser 6 o más.
-        st.sidebar.caption(f"File: {filename} | Loaded: {len(df)} rows") 
-        # -----------------------------------
-        
+        # st.sidebar.caption(f"File: {filename} | Loaded: {len(df)} rows") 
         return df.dropna(subset=required_cols)
     except Exception:
         return None
 
 # ==============================================================================
-# 3. LÓGICA: PART 1 (MULTIPLE CHOICE)
+# 4. LÓGICA: PART 1 (MULTIPLE CHOICE)
 # ==============================================================================
 def run_part_1():
     st.header("🔡 Part 1: Multiple Choice Cloze")
     df = load_data('fce_part1.csv', ['Text', 'Answers', 'Options'])
     
     if df is None or df.empty:
-        st.error("⚠️ Error: Could not find 'fce_part1.csv'. Please upload it to GitHub.")
+        st.error("⚠️ Error: Could not find 'fce_part1.csv'.")
         return
+
+    # --- RECUPERACIÓN DE EMERGENCIA ---
+    if 'p1_data' not in st.session_state:
+        # Intentamos cargar del disco
+        recovered = load_state_from_disk("p1")
+        if recovered:
+            st.session_state.p1_data = recovered
+            st.session_state.p1_active = True
+            st.session_state.p1_start = time.time() # Reiniciamos reloj (es difícil guardar tiempo exacto)
+            st.session_state.p1_limit = 300 # Valor por defecto seguro
+            st.toast("Sesión restaurada", icon="🔄")
 
     # --- Setup ---
     if 'p1_active' not in st.session_state: st.session_state.p1_active = False
@@ -88,15 +126,22 @@ def run_part_1():
         time_limit = st.slider("⏱️ Time Limit (seconds):", 60, 600, 300, 30, key="slider_p1")
         
         if st.button("🚀 Start Part 1", type="primary"):
-            st.session_state.p1_data = df.sample(1).iloc[0]
+            row = df.sample(1).iloc[0]
+            st.session_state.p1_data = row
             st.session_state.p1_active = True
             st.session_state.p1_start = time.time()
             st.session_state.p1_limit = time_limit
+            
+            # GUARDAR EN DISCO (NUEVO)
+            save_state_to_disk("p1", row)
             st.rerun()
 
     # --- Exam ---
     else:
+        # Convertimos a dict si viene de recuperación json, o Series si es fresco.
+        # Pandas series se comporta como dict para accesos ['key'], así que es compatible.
         row = st.session_state.p1_data
+        
         respuestas = str(row['Answers']).split('|')
         opciones_raw = str(row['Options']).split('|')
         opciones_matriz = [opt.split('/') for opt in opciones_raw]
@@ -163,37 +208,26 @@ def run_part_1():
                 full_text = full_text.replace(f"_{i+1}_", f"<span class='gap-correct'>{ans}</span>")
             st.markdown(f"<div class='text-box'>{full_text}</div>", unsafe_allow_html=True)
 
-            # 2. EL BOTÓN MÁGICO "TRY ANOTHER TEXT" (MEJORADO)
-    if st.button("🔄 Try Another Text"):
-        # Verificamos si hay suficientes datos para variar
-        if len(df) > 1:
-            # Guardamos el título actual para comparar
-            titulo_actual = st.session_state.p1_data['Title']
-            
-            # Buscamos uno nuevo hasta que sea diferente al actual
-            nuevo_row = df.sample(1).iloc[0]
-            while nuevo_row['Title'] == titulo_actual:
+        # BOTÓN NUEVO TEXTO
+        if st.button("🔄 Try Another Text"):
+            if len(df) > 1:
+                titulo_actual = st.session_state.p1_data['Title']
                 nuevo_row = df.sample(1).iloc[0]
-            
-            # Asignamos el nuevo y reiniciamos el reloj
-            st.session_state.p1_data = nuevo_row
-            st.session_state.p1_start = time.time()
-            st.rerun()
-        else:
-            st.warning("Solo hay 1 ejercicio en la base de datos. Añade más en GitHub.")
+                while nuevo_row['Title'] == titulo_actual:
+                    nuevo_row = df.sample(1).iloc[0]
+                
+                st.session_state.p1_data = nuevo_row
+                st.session_state.p1_start = time.time()
+                # GUARDAR NUEVO EN DISCO
+                save_state_to_disk("p1", nuevo_row)
+                st.rerun()
+            else:
+                st.warning("Solo hay 1 ejercicio en la base de datos.")
 
 # ==============================================================================
-# 4. LÓGICA: PART 2 (OPEN CLOZE)
+# 5. LÓGICA: PART 2 (OPEN CLOZE)
 # ==============================================================================
 def run_part_2():
-# 1. Verificamos si los datos existen
-    if 'p2_data' not in st.session_state:
-        st.error("No se encontraron datos cargados. Por favor ve al inicio o carga la información necesaria.")
-        return # Detenemos la función para evitar el error
-
-# 2. Ahora es seguro acceder
-    titulo_actual = st.session_state.p2_data['Title']
-    
     st.header("🧩 Part 2: Open Cloze")
     df = load_data('fce_open_cloze.csv', ['Text', 'Answers'])
     
@@ -201,20 +235,46 @@ def run_part_2():
         st.error("⚠️ Error: Could not find 'fce_open_cloze.csv'.")
         return
 
+    # --- RECUPERACIÓN DE EMERGENCIA ---
+    if 'p2_data' not in st.session_state:
+        # Intentamos cargar del disco
+        recovered = load_state_from_disk("p2")
+        if recovered:
+            st.session_state.p2_data = recovered
+            st.session_state.p2_active = True
+            st.session_state.p2_start = time.time()
+            st.session_state.p2_limit = 300
+            st.toast("Sesión restaurada desde archivo", icon="📂")
+    # ----------------------------------
+
     if 'p2_active' not in st.session_state: st.session_state.p2_active = False
 
+    # ESTADO INICIAL (Instrucciones)
     if not st.session_state.p2_active:
         st.markdown("<div class='instruction-box'><b>Instructions:</b> Read the text. Think of the word which best fits each gap. Use only ONE word in each gap.</div>", unsafe_allow_html=True)
         time_limit = st.slider("⏱️ Time Limit (seconds):", 60, 600, 300, 30, key="slider_p2")
         
         if st.button("🚀 Start Part 2", type="primary"):
-            st.session_state.p2_data = df.sample(1).iloc[0]
+            row = df.sample(1).iloc[0]
+            st.session_state.p2_data = row
             st.session_state.p2_active = True
             st.session_state.p2_start = time.time()
             st.session_state.p2_limit = time_limit
+            
+            # GUARDAR EN DISCO (NUEVO)
+            save_state_to_disk("p2", row)
             st.rerun()
 
+    # ESTADO EXAMEN (Viendo preguntas)
     else:
+        # Si llegamos aquí sin p2_data, algo grave pasó, pero el bloque de emergencia arriba debió atraparlo.
+        if 'p2_data' not in st.session_state:
+            st.error("Datos perdidos. Por favor reinicia la Parte 2.")
+            if st.button("Reiniciar"):
+                st.session_state.p2_active = False
+                st.rerun()
+            return
+
         row = st.session_state.p2_data
         respuestas = str(row['Answers']).split('|')
         
@@ -270,27 +330,22 @@ def run_part_2():
                 full_text = full_text.replace(f"_{i+1}_", f"<span class='gap-correct'>{ans}</span>")
             st.markdown(f"<div class='text-box'>{full_text}</div>", unsafe_allow_html=True)
 
-            # 2. EL BOTÓN MÁGICO "TRY ANOTHER TEXT" (MEJORADO)
-    if st.button("🔄 Try Another Text"):
-        # Verificamos si hay suficientes datos para variar
-        if len(df) > 1:
-            # Guardamos el título actual para comparar
-            titulo_actual = st.session_state.p2_data['Title']
-            
-            # Buscamos uno nuevo hasta que sea diferente al actual
-            nuevo_row = df.sample(1).iloc[0]
-            while nuevo_row['Title'] == titulo_actual:
+        if st.button("🔄 Try Another Text"):
+            if len(df) > 1:
+                titulo_actual = st.session_state.p2_data['Title']
                 nuevo_row = df.sample(1).iloc[0]
-            
-            # Asignamos el nuevo y reiniciamos el reloj
-            st.session_state.p2_data = nuevo_row
-            st.session_state.p2_start = time.time()
-            st.rerun()
-        else:
-            st.warning("Solo hay 1 ejercicio en la base de datos. Añade más en GitHub.")
+                while nuevo_row['Title'] == titulo_actual:
+                    nuevo_row = df.sample(1).iloc[0]
+                
+                st.session_state.p2_data = nuevo_row
+                st.session_state.p2_start = time.time()
+                save_state_to_disk("p2", nuevo_row)
+                st.rerun()
+            else:
+                st.warning("Solo hay 1 ejercicio en la base de datos.")
 
 # ==============================================================================
-# 5. LÓGICA: PART 3 (WORD FORMATION)
+# 6. LÓGICA: PART 3 (WORD FORMATION)
 # ==============================================================================
 def run_part_3():
     st.header("📝 Part 3: Word Formation")
@@ -326,6 +381,14 @@ def run_part_3():
     else:
         # Progress
         idx = st.session_state.p3_index
+        # Part 3 usa un DataFrame entero, es más complejo de guardar en JSON simple
+        # Para simplificar, si Part 3 se refresca, se reinicia (o se podría implementar lógica compleja)
+        # Aquí asumimos que si se pierde p3_data, se reinicia.
+        if 'p3_data' not in st.session_state:
+             st.warning("Session reset due to refresh.")
+             st.session_state.p3_active = False
+             st.rerun()
+             
         row = st.session_state.p3_data.iloc[idx]
         
         st.progress(idx / st.session_state.p3_total, text=f"Question {idx+1}/{st.session_state.p3_total}")
@@ -383,33 +446,63 @@ def run_part_3():
             st.rerun()
 
 # ==============================================================================
-# 6. MENÚ PRINCIPAL (SIDEBAR)
+# 7. MENÚ PRINCIPAL (SIDEBAR CON URL)
 # ==============================================================================
 def main():
     st.sidebar.image("https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/Flag_of_the_United_Kingdom.svg/640px-Flag_of_the_United_Kingdom.svg.png", width=100)
     st.sidebar.title("🇬🇧 FCE Trainer")
     st.sidebar.markdown("---")
     
+    # 1. DEFINIMOS LAS OPCIONES Y SUS PARÁMETROS URL
+    # Mapeo: Nombre Visible -> Valor URL
+    options_map = {
+        "🏠 Home": "home",
+        "Part 1: Multiple Choice": "part1",
+        "Part 2: Open Cloze": "part2",
+        "Part 3: Word Formation": "part3"
+    }
+    # Inverso: Valor URL -> Indice (0, 1, 2, 3)
+    options_list = list(options_map.keys())
+    
+    # 2. LEER URL ACTUAL
+    query_params = st.query_params
+    url_view = query_params.get("view", "home") # Por defecto 'home'
+
+    # 3. DETERMINAR INDICE POR DEFECTO DEL MENU
+    default_index = 0
+    for i, name in enumerate(options_list):
+        if options_map[name] == url_view:
+            default_index = i
+            break
+    
+    # 4. CREAR EL MENÚ
     menu = st.sidebar.radio(
         "Select Module:",
-        ["🏠 Home", "Part 1: Multiple Choice", "Part 2: Open Cloze", "Part 3: Word Formation"]
+        options_list,
+        index=default_index
     )
     
+    # 5. ACTUALIZAR URL SI EL USUARIO CAMBIA EL MENU
+    # Si lo que seleccionó es diferente a lo que hay en la URL, actualizamos
+    if options_map[menu] != url_view:
+        st.query_params["view"] = options_map[menu]
+        # Opcional: st.rerun() si notas lag, pero Streamlit suele manejarlo bien
+    
     st.sidebar.markdown("---")
-    st.sidebar.caption("v5.0 - Final Stable Release")
+    st.sidebar.caption("v5.1 - Persistent Version")
 
-    # --- CRÉDITOS DEL CREADOR (Tech Style) ---
+    # --- CRÉDITOS ---
     st.sidebar.markdown("---")
     st.sidebar.markdown("""
         <style>
         .dev-card {
             background-color: #1e1e1e;
-            color: #00ff41; /* Verde Hacker */
+            color: #00ff41; 
             padding: 15px;
             border-radius: 10px;
             border: 1px solid #00ff41;
             text-align: center;
-            font-family: 'Courier New', monospace; /* Letra tecnológica */
+            font-family: 'Courier New', monospace; 
             box-shadow: 0 0 10px rgba(0, 255, 65, 0.2);
             margin-bottom: 20px;
         }
